@@ -1,4 +1,4 @@
-"""This module has both dank and dark powers"""
+"""Logs in to phpbb forum, pulls last active threads, and compares with what we have on file"""
 import json
 from pathlib import Path
 from datetime import datetime, timedelta

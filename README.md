@@ -13,4 +13,4 @@ The soup-parsing is specific to the template of the forum I'm currently using, s
 It would be easier to hook into the event fired when a post is submitted in the backend, or perhaps the DB itself, but for my use, I dont have direct access to the box with phpbb running, so I opted with a login-and-parse strategy, which is a lot more flexible and allows others to adopt this easier.
 
 ## Config
-config.py contains variables you will want to fill in yourself if you want to run this. It also lets you customize a few things, like botname and string-format. 
+config.py contains variables you will want to fill in yourself if you want to run this. It also lets you customize a few things, like botname and string-format.

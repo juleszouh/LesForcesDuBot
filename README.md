@@ -1,16 +1,22 @@
-# phpbb-active-topics-to-discord
-Script to post on discord if there is a forum bump on a phpbb forum.
+# <img src="lfdb.png" width="10%" height="10%"> Les Forces Du Bot
+**Script permettant de notifier certains messages du forum sur discord.**
 
-## Running
-Right now I'm using a task scheduler (like cron) to run this once a minute.
+### Règles de notification
+- Tous les nouveaux messages de la section *"Annonces du groupe de gestion"* sont notifiés dans le canal *"annonces"* du discord.
+- Toutes les nouvelles discussions ouvertes dans les autres sections du forum sont notifiés dans le canal *"général"* du discord.
 
-If you dont have access to that, but instead can leave a process running for a long time, you can wrap the initializing method in a `while 1:` loop.
+### Configuration
+Le fichier `config.py` contient des variables permettant des customisations, comme le nom du bot et le format de ses messages.
 
-## Parsing
-The soup-parsing is specific to the template of the forum I'm currently using, so you'll have to adapt the **scan_post** method if you want to implement this. Parsing logic is contained within this method, to keep it easy.
+Mais il faut surtout configurer les autorisations d'accès à discord et au forum :
+- créer les *webhooks discord*, pour les canaux *"annonces"* et *"général"*, et renseigner les URLs dans la config
+- créer un utilisateur de forum, optionnellement dans le groupe *membres*, et renseigner user/pass dans la config
 
-## Why not hook into phpbb post event
-It would be easier to hook into the event fired when a post is submitted in the backend, or perhaps the DB itself, but for my use, I dont have direct access to the box with phpbb running, so I opted with a login-and-parse strategy, which is a lot more flexible and allows others to adopt this easier.
+### Lancement
+Pour l'instant on utilise la *crontab* pour lancer le script toutes les minutes :
 
-## Config
-config.py contains variables you will want to fill in yourself if you want to run this. It also lets you customize a few things, like botname and string-format.
+`* * * * *   cd $HOME/LesForcesDuBot && python main.py`
+
+### Démo
+
+![demo](demo.png)

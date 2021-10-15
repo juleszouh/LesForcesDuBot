@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import time
 import requests
 from bs4 import BeautifulSoup
-from config import WEB_HOOKER, BOT_NAME, MSG
-from config import USER_NAME, PASSWORD, LOGIN_URL, FEED_URL, FORUM_URL, TEMP_FILE_NAME
+from config import GENERAL_CHANNEL, ANNOUNCE_CHANNEL, BOT_NAME
+from config import USER_NAME, PASSWORD, LOGIN_URL, FEED_URL, FORUM_URL, ANNOUNCE_URL, TEMP_FILE_NAME
 
 def put_file(content):
     """Dumps list of last 10 posts to file"""
@@ -19,42 +19,45 @@ def get_file():
         with open(TEMP_FILE_NAME, 'r') as fil:
             return json.load(fil)
 
-def post_too_old(post):
-    """check that a bump is within the last two hours, to avoid old bumps reappearing"""
-    check_date = datetime.now()-timedelta(hours=2)
-    post_date = datetime.strptime(post.get('bump_time'), '%d %b %Y, %H:%M')
-    return check_date > post_date
-
-def discord_broadcast(content):
+def discord_broadcast(content, channel):
     """Writes to discord"""
-    if post_too_old(content):
-        return
-
-    to_discord = MSG.format(**content)
+    to_discord = channel.get('msg').format(**content)
     webhook = {
         'content': to_discord,
         'username': BOT_NAME
     }
-    requests.post(WEB_HOOKER, json=webhook)
+    requests.post(channel.get('url'), json=webhook)
     time.sleep(5) #to avoid spam if theres multiple
 
 def scan_post(post):
     """Scans the inner html of a post. Will break if site changes anything in layout"""
     return {
-        'href': FORUM_URL + post.select_one('a.topictitle').get('href')[1:],
-        'topic': post.select_one('dt a.topictitle').string,
-        'name': post.select_one('dt a.username-coloured').string,
-        'bump_name': post.select_one('dd.lastpost a.username-coloured').string,
-        'bump_time': post.select_one('dd.lastpost').contents[0].text.split('\n')[2].strip()
+        'href': FORUM_URL + post.select_one('a.topictitle').get('href'),
+        'topic': post.select_one('a.topictitle').string[1:],
+        'name': post.select_one('a.gensmall').string,
+        'section': post.select('a')[3].string,
+        'last': FORUM_URL + post.select('dd.lastpost a')[1].get('href')
     }
+
+def get_channel(sess, post):
+    """Gets discord channel depending on forum section. Will break if site changes anything in layout"""
+    current = sess.get(post.get('href'))
+    current_soup = BeautifulSoup(current.text, 'html.parser')
+
+    for nav in current_soup.select('a.nav'):
+        nav_href = nav.get('href')
+        if nav_href == ANNOUNCE_URL:
+            return ANNOUNCE_CHANNEL
+
+    current_href = FORUM_URL + current_soup.select_one('h2.topic-title a').get('href')
+    if current_href == post.get('last'):
+        return GENERAL_CHANNEL
 
 def auth_and_get_posts(username, password):
     """Logs into forum and gets latest posts"""
     payload = {
         'username': username,
         'password': password,
-        'redirect': './ucp.php?mode=login',
-        'sid': '',
         'login': 'Login'
     }
 
@@ -73,13 +76,12 @@ def auth_and_get_posts(username, password):
             formatted_post = scan_post(raw_post)
             current_post_list.append(formatted_post)
 
-        if not stored_post_list: #nullcheck the list (i.e first run of the script)
-            stored_post_list = current_post_list
-
         if stored_post_list != current_post_list:
             for post in current_post_list:
-                if stored_post_list.count(post) == 0:
-                    discord_broadcast(post)
+                if not stored_post_list or stored_post_list.count(post) == 0:
+                    channel = get_channel(sess, post)
+                    if (channel):
+                        discord_broadcast(post, channel)
 
         put_file(current_post_list)
 
